@@ -16,6 +16,12 @@ struct transition {
     static constexpr auto cond = ch;
 };
 
+template <class... States>
+struct state_group {
+    template <class State>
+    static constexpr auto has_state = (std::is_same_v<States, State> || ...);
+};
+
 template <class... Transitions>
 struct dfa;
 

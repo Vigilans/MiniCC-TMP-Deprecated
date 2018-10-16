@@ -18,7 +18,11 @@ int main() {
     using A = state<0, 1, 2>;
     using B = state<1, 2, 3, 4, 5>;
     using t = transition<A, B, '1'>;
-    constexpr bool result = std::is_same_v<dfa<t>::trans<A, '1'>, B>;
+    std::is_same_v<dfa<t>::trans<A, '1'>, B>;
+
+    using C = state<1, 2, 3>;
+    state_group<A, B>::has_state<A>;
+    state_group<A, B>::has_state<C>;
 
     return 0;
 }
