@@ -1,11 +1,14 @@
 #ifndef UTILITY_H_
 #define UTILITY_H_
-#include <type_traits>
+#include <utility>
 
 namespace cp {
 
+template <size_t N>
+using index_constant = std::integral_constant<size_t, N>;
+
 template <char c>
-struct char_constant : std::integral_constant<char, c> {};
+using char_constant = std::integral_constant<char, c>;
 
 template <class T, T c1, T c2>
 constexpr std::bool_constant<c1 == c2> operator==(std::integral_constant<T, c1>, std::integral_constant<T, c2>) { return {}; }
@@ -16,6 +19,7 @@ constexpr std::bool_constant<c1 != c2> operator!=(std::integral_constant<T, c1>,
 template <char c>
 constexpr static auto ch = char_constant<c>{};
 
+// 字符序列，字符的位置有实际意义
 template <char... chars>
 struct char_sequence : std::integer_sequence<char, chars...> {
     template <size_t i>
@@ -25,6 +29,8 @@ struct char_sequence : std::integer_sequence<char, chars...> {
     }
 };
 
+// 字符集合，字符的位置无意义
+// 暂时没有需要比较字符集合相等的操作，故不保证有序也可以
 template <char... chars>
 struct char_set {
     template <char ch>
@@ -33,9 +39,6 @@ struct char_set {
     template <char ch>
     using insert = std::conditional_t<has<ch>, char_set<chars...>, char_set<ch, chars...>>;
 };
-
-template <class Left, class Right>
-struct concat;
 
 // 按照less-than字典序进行比较
 template <class T, class I1, class I2>
@@ -50,13 +53,14 @@ struct lex_compare<T, std::integer_sequence<T, v, rest...>, std::integer_sequenc
 template <class T, T v, T... rest> // 空序列比非空序列小，返回true
 struct lex_compare<T, std::integer_sequence<T>, std::integer_sequence<T, v, rest...>> : std::true_type {};
 
+template <class T, T v1, T v2> // 单元素序列直接比较值
+struct lex_compare<T, std::integer_sequence<T, v1>, std::integer_sequence<T, v2>> : std::bool_constant<(v1 < v2)> {};
+
 template <class T, T v1, T... I1, T v2, T... I2> // 两者均非空时，进行默认字典序比较
 struct lex_compare<T, std::integer_sequence<T, v1, I1...>, std::integer_sequence<T, v2, I2...>>
-    : std::bool_constant<
-        v1 < v2 ? true : 
-        v1 > v2 ? false :
-        lex_compare<T, std::integer_sequence<T, I1...>, std::integer_sequence<T, I2...>>::value
-    >;
+    : std::conditional_t<(v1 < v2), std::true_type,
+      std::conditional_t<(v1 > v2), std::false_type,
+      lex_compare<T, std::integer_sequence<T, I1...>, std::integer_sequence<T, I2...>>>> {};
 
 template <bool v, class T1, class T2>
 constexpr decltype(auto) op_cond(std::bool_constant<v>, T1 lhs, T2 rhs) {
