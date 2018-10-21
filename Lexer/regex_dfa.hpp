@@ -1,41 +1,133 @@
 #ifndef REGEX_DFA_H_
 #define REGEX_DFA_H_
 #include "utility.hpp"
+#include <tuple>
 
 namespace cp {
 
-// 由Regex AST的结点位置进行编码的状态。
+/* ---------------------前置声明--------------------- */
+
+template <size_t... I> struct state; // 由Regex AST的结点位置进行编码的状态。
+template <class... States> struct state_group; // 状态的集合，集合里的状态有序且不重复。
+template <class... Groups> struct group_list; // 状态组的列表，列表里的组不保证有序且可重复。
+
+using null_state = state<>;
+using empty_group = state_group<>;
+
+/* ---------------------state实现--------------------- */
+
 template <size_t... I>
-struct state;
+struct state : std::index_sequence<I...> {
+    using code = std::index_sequence<I...>;
+    // TODO: add static_assert here
+};
 
 // 按编码的字典序对集合进行比较。
 template <class Left, class Right>
-struct state_compare;
+constexpr bool state_compare_v = lex_compare<size_t, Left::code, Right::code>::value;
 
-template <size_t... I1, size_t... I2>
-struct state_compare<state<I1...>, state<I2...>>
-   : lex_compare<size_t, std::index_sequence<I1...>, std::index_sequence<I2...>>;
+/* ---------------------state_group实现--------------------- */
 
-// 状态的集合，集合里的状态有序且不重复。
 template <class... States>
-struct state_group {
-    // 检查组里是否含有指定状态
-    template <class State>
-    static constexpr auto has_state = (std::is_same_v<States, State> || ...);
+struct state_group : std::tuple<States...> {
+    // 定义基础的type_traits
+    using this_type = state_group<States...>;
+    using super = std::tuple<States...>;
+    
+    // 获取元素数量
+    constexpr static auto size() { return sizeof...(States); }
 
-    // 插入新状态
+    // 合并多个状态或状态集合
+    template <class... GroupsOrStates>
+    struct _concat_proc;
+
+    template <>
+    struct _concat_proc<> { using result = state_group<States...>; };
+
+    template <class... TheseStates, class... Rest> // 合并一个状态集合
+    struct _concat_proc<state_group<TheseStates...>, Rest...> {
+        using result = state_group<States..., TheseStates...>::concat<Rest...>;
+    };
+
+    template <class ThisState, class... Rest> // 合并一个状态
+    struct _concat_proc<ThisState, Rest...> {
+        using result = state_group<States..., ThisState>::concat<Rest...>
+    };
+
+    template <class... GroupsOrStates>
+    using concat = _concat_proc<GroupsOrStates...>::result;
+
+    // 分解出第一个状态，返回 { 第一个状态，剩下的状态集合 }
+    template <class Group = state_group<States...>>
+    struct pop_first;
+
+    template <>
+    struct pop_first<state_group<>> : std::pair<null_state, empty_group> {};
+
+    template <class State, class... Rest>
+    struct pop_first<state_group<State, Rest...>> : std::pair<State, state_group<Rest...>> {};
+
+    // 二分法在I处将Sequence切分
+    template <size_t I>
+    struct _split_proc;
+
+    template <>
+    struct _split_proc<0> { using result = std::pair<state_group<>, state_group<States...>>; };
+
+    template <>
+    struct _split_proc<1> {
+        using poped = pop_first<state_group<States...>>;
+        using result = std::pair<state_group<poped::first_type>, poped::second_type>;
+    };
+
+    template <size_t I>
+    struct _split_proc {
+        using a = _split_proc<I/2>::result;
+        using b = a::second_type::split<(I+1)/2>>::result;
+        using result = std::pair<a::first_type::concat<b::first_type>, b::second_type>;
+    };
+
+    template <size_t I>
+    using split = _split_proc<I>::result;
+
+    // 获取有序状态集的前半与后半部分
+    using first_half = split<size() / 2>::first_type;
+    using second_half = pop_first<split<size() / 2>::second_type>::second_type;
+    using mid_state = pop_first<split<size() / 2>::second_type>::first_type;
+    
+    // 二分法检查组里是否含有指定状态（利用了三目运算符的短路）
     template <class State>
-    using insert = std::conditional_t<
-        has_state<State>, state_group<States...>, state_group<State, States...>
-    >;
+    static constexpr bool has_state = size() == 0 ? false :
+        std::is_same_v<State, mid_state>  ? true : 
+        state_compare_v<State, mid_state> ? first_half::has_state<State> : second_half::has_state<State>;
+
+    // 二分法插入非重新状态（利用了SFINAE作模式匹配）
+    template <class State, class = void>
+    struct _insert_proc;
+
+    template <class State> // 空集合直接插入新状态
+    struct _insert_proc<State, std::enable_if_t<size() == 0>> { using result = state_group<State>; };
+
+    template <class State> // 新状态在左半部分
+    struct _insert_proc<State, std::enable_if_t<state_compare_v<State, mid_state>>> { 
+        using result = first_half::insert<State>::concat<mid_state, second_half>; 
+    };
+
+    template <class State> // 新状态在右半部分
+    struct _insert_proc<State, std::enable_if_t<state_compare_v<mid_state, State>>> { 
+        using result = first_half::concat<mid_state, second_half::insert<State>>; 
+    };
+
+    template <class State> // 一般来说最后一定会落在这里
+    struct _insert_proc<State, std::enable_if_t<std::is_same_v<mid_state, State>>> { 
+        using result = state_group<States...>; // 不插入
+    };
+    
+    template <class State>
+    using insert = _insert_proc<State>::result;
 };
 
-// 状态组的列表，列表里的组不保证有序且可重复。
-template <class... Groups>
-struct group_list;
-
-template <class... Left, class... Right>
-struct concat<group_list<Left...>, group_list<Right...>> : group_list<Left..., Right...> {};
+/* ---------------------group_list实现--------------------- */
 
 template <>
 struct group_list<> {
@@ -51,7 +143,7 @@ struct group_list<Group, Rest...> {
     // 检索第一个包含指定状态的组
     template <class State>
     using find = std::conditional_t<
-        Group::has_state<State>, Group, group_set<Rest...>::template find<State>
+        Group::has_state<State>, Group, group_list<Rest...>::template find<State>
     >;
 
     // 插入新组，并将新组放置在等价组旁边
@@ -63,8 +155,7 @@ struct group_list<Group, Rest...> {
     >;
 };
 
-using null_state = state<>;
-using empty_group = state_group<>;
+
 
 // 状态机上的一个转换。
 template <class From, class To, char ch>
