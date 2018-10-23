@@ -1,4 +1,4 @@
-#include "regex_dfa.hpp"
+#include "../src/regex_dfa.hpp"
 
 using namespace cp;
 using namespace std;
