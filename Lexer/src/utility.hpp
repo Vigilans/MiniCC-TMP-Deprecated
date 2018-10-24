@@ -62,6 +62,20 @@ struct lex_compare<T, std::integer_sequence<T, v1, I1...>, std::integer_sequence
       std::conditional_t<(v1 > v2), std::false_type,
       lex_compare<T, std::integer_sequence<T, I1...>, std::integer_sequence<T, I2...>>>> {};
 
+// 判断一个整数序列是否为升序
+template <class T, class I>
+struct is_ascending;
+
+template <class T>
+struct is_ascending<T, std::integer_sequence<T>> : std::true_type {};
+
+template <class T, T v>
+struct is_ascending<T, std::integer_sequence<T, v>> : std::true_type {};
+
+template <class T, T v1, T v2, T... I>
+struct is_ascending<T, std::integer_sequence<T, v1, v2, I...>> :
+    std::bool_constant<(v1 < v2) && is_ascending<T, std::integer_sequence<T, v2, I...>>::value> {};
+
 template <bool v, class T1, class T2>
 constexpr decltype(auto) op_cond(std::bool_constant<v>, T1 lhs, T2 rhs) {
     if constexpr (v) return lhs;

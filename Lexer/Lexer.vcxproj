@@ -18,6 +18,17 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="test\unittest_regex_dfa.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\regex.hpp" />
+    <ClInclude Include="src\regex_def.hpp" />
+    <ClInclude Include="src\regex_dfa.hpp" />
+    <ClInclude Include="src\regex_parse.hpp" />
+    <ClInclude Include="src\utility.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{FC8D2CD1-D9C4-4266-937D-548FAB943885}</ProjectGuid>
@@ -142,17 +153,6 @@
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="regex.hpp" />
-    <ClInclude Include="regex_def.hpp" />
-    <ClInclude Include="regex_dfa.hpp" />
-    <ClInclude Include="regex_parse.hpp" />
-    <ClInclude Include="utility.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="unittest_regex_dfa.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

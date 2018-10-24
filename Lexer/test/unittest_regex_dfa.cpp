@@ -8,7 +8,7 @@ struct b : a{};
 struct c : b{};
 
 void test() {
-    // 下列A, B, C, D是升序表示的
+    // 下列A, B, C, D是严格升序表示的
     using A = state<0, 1, 2>;
     using B = state<1, 2, 3>;
     using C = state<1, 2, 3, 4, 5>;
