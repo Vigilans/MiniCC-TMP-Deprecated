@@ -1,7 +1,7 @@
 #include <iostream>
 #include <typeinfo>
 #include "regex_def.hpp"
-#include "regex_dfa.hpp"
+#include "dfa.hpp"
 
 using namespace std;
 using namespace cp;

@@ -1,6 +1,6 @@
 #ifndef REGEX_DEF_H_
 #define REGEX_DEF_H_
-#include "utility.hpp"
+#include "dfa_state.hpp"
 
 namespace cp {
 

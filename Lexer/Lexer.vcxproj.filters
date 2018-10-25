@@ -29,13 +29,16 @@
     <ClInclude Include="src\regex_def.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\regex_dfa.hpp">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="src\regex_parse.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\utility.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dfa.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dfa_state.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

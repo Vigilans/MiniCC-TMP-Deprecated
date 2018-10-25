@@ -1,11 +1,7 @@
-#include "../src/regex_dfa.hpp"
+#include "../src/dfa.hpp"
 
 using namespace cp;
 using namespace std;
-
-struct a {};
-struct b : a{};
-struct c : b{};
 
 void test() {
     // 下列A, B, C, D是严格升序表示的
@@ -22,9 +18,9 @@ void test() {
     static_assert(!lex_compare<int, integer_sequence<int, 1>, integer_sequence<int>>::value);
     static_assert(lex_compare<int, integer_sequence<int>, integer_sequence<int, 1>>::value);
     static_assert(lex_compare<int, integer_sequence<int, 1, 2, 3>, integer_sequence<int, 1, 4, 5>>::value);
-    static_assert(state_compare_v<A, B>);
-    static_assert(state_compare_v<B, C>);
-    static_assert(!state_compare_v<D, C>);
+    static_assert(state_compare<A, B>::value);
+    static_assert(state_compare<B, C>::value);
+    static_assert(!state_compare<D, C>::value);
 
     // test concat
     static_assert(is_same_v<state_group<A, B, C>, G1::concat<C>>);
@@ -42,12 +38,12 @@ void test() {
     // test halves
     static_assert(is_same_v<G3::first_half, G1>);
     static_assert(is_same_v<G3::second_half, state_group<D>>);
-    static_assert(is_same_v<G3::mid_state, C>);
-
+    static_assert(is_same_v<G3::mid_elem, C>);
+   
     // test has_state
-    static_assert(state_group<A, B>::has_state<A>);
-    static_assert(!state_group<A, B>::has_state<C>);
-    static_assert(G3::has_state<B>);
+    static_assert(state_group<A, B>::has<A>);
+    static_assert(!state_group<A, B>::has<C>);
+    static_assert(G3::has<B>);
 
     // test insert
     static_assert(std::is_same_v<state_group<D>, empty_group::insert<D>>);

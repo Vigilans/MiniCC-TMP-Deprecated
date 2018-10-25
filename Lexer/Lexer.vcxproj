@@ -25,8 +25,9 @@
   <ItemGroup>
     <ClInclude Include="src\regex.hpp" />
     <ClInclude Include="src\regex_def.hpp" />
-    <ClInclude Include="src\regex_dfa.hpp" />
+    <ClInclude Include="src\dfa.hpp" />
     <ClInclude Include="src\regex_parse.hpp" />
+    <ClInclude Include="src\dfa_state.hpp" />
     <ClInclude Include="src\utility.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
