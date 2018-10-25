@@ -19,7 +19,7 @@ using empty_group = state_group<>;
 template <size_t... I>
 struct state : std::index_sequence<I...> {
     using code = std::index_sequence<I...>;
-    // TODO: add static_assert here
+    static_assert(is_ascending<size_t, code>::value);
 };
 
 // 按编码的字典序对集合进行比较。
@@ -33,6 +33,7 @@ struct state_group : std::tuple<States...> {
     // 定义基础的type_traits
     using this_type = state_group<States...>;
     using super = std::tuple<States...>;
+    using front = std::tuple_element<0, super>;
     
     // 获取元素数量
     constexpr static auto size() { return sizeof...(States); }
@@ -51,7 +52,7 @@ struct state_group : std::tuple<States...> {
 
     template <class ThisState, class... Rest> // 合并一个状态
     struct _concat_proc<ThisState, Rest...> {
-        using result = state_group<States..., ThisState>::concat<Rest...>
+        using result = state_group<States..., ThisState>::concat<Rest...>;
     };
 
     template <class... GroupsOrStates>
@@ -83,7 +84,7 @@ struct state_group : std::tuple<States...> {
     template <size_t I>
     struct _split_proc {
         using a = _split_proc<I/2>::result;
-        using b = a::second_type::split<(I+1)/2>>::result;
+        using b = a::second_type::_split_proc<(I+1)/2>::result;
         using result = std::pair<a::first_type::concat<b::first_type>, b::second_type>;
     };
 
@@ -134,8 +135,10 @@ struct group_list<> {
     template <class State>
     using find = empty_group;
 
-    template <class NewGroup>
-    using insert = group_list<NewGroup>;
+    using front = void;
+
+    //template <class NewGroup>
+    //using insert = group_list<NewGroup>;
 };
 
 template <class Group, class... Rest>
@@ -146,16 +149,17 @@ struct group_list<Group, Rest...> {
         Group::has_state<State>, Group, group_list<Rest...>::template find<State>
     >;
 
-    // 插入新组，并将新组放置在等价组旁边
-    template <class NewGroup>
-    using insert = std::conditional_t<
-        std::is_same_v<Group, NewGroup>,
-        group_list<NewGroup, Group, Rest...>,
-        concat<group_list<Group>, group_list<Rest...>::insert<NewGroup>>
-    >;
+    // 获取第一个组
+    using front = Group;
+
+    //// 插入新组，并将新组放置在等价组旁边
+    //template <class NewGroup>
+    //using insert = std::conditional_t<
+    //    std::is_same_v<Group, NewGroup>,
+    //    group_list<NewGroup, Group, Rest...>,
+    //    concat<group_list<Group>, group_list<Rest...>::insert<NewGroup>>
+    //>;
 };
-
-
 
 // 状态机上的一个转换。
 template <class From, class To, char ch>
@@ -193,26 +197,91 @@ struct trans_table<Transition, Rest...> {
     using charset = trans_table<Rest...>::charset::insert<ch>;
 };
 
-template <class TransTable, class TerminalStates>
+template <class TransTable, class InitialState, class AcceptStates>
 struct dfa {
+    // 基础数据定义
+    using states  = TransTable::states;
+    using charset = TransTable::charset;
+    using initial_state = InitialState;
+    using accept_states = AcceptStates;
+    using normal_states = states::diff<accept_states>;
+
+    // 转换函数定义
     template <class From, char ch>
     using trans = TransTable::get<From, ch>;
+    
+private: /* ---------------------min_dfa算法实现--------------------- */
+    // 组分割阶段
+    template <class... Groups>
+    struct _min_dfa_proc_split {
+        using cur_groups = group_list<Groups...>;
 
-    using accept_states = TerminalStates;
-    using charset = TransTable::charset;
+        using new_groups = group_list<>;
+
+        using result = std::conditional_t<
+            std::is_same_v<new_groups, cur_groups>,
+            new_groups, _min_dfa_proc<new_groups>::_division_list
+        >;
+    };
+
+    using _division_list = _min_dfa_proc_split<normal_states, accept_states>::result;
+
+    // 映射阶段
+    template <class ListOrGroup> struct _min_dfa_proc_rep;
+
+    template <> struct _min_dfa_proc_rep<group_list<>> { using result = empty_group; };
+
+    template <> struct _min_dfa_proc_rep<empty_group> { using result = empty_group; };
+
+    template <class Group, class... Rest> // 映射List中每个Group至它们的代表状态
+    struct _min_dfa_proc_rep<group_list<Group, Rest...>> { 
+        using result = _min_dfa_proc_rep<group_list<Rest...>>::result::insert<Group::front>;
+    };
+
+    template <class State, class... Rest> // 映射Group中的每个状态至它们所在组的代表状态
+    struct _min_dfa_proc_rep<state_group<State, Rest...>> {
+        using rep_state = _division_list::find<State>::front;
+        using result = _min_dfa_proc_rep<state_group<Rest...>>::result::insert<rep_state>;
+    };
+
+    // 构建新转换表阶段
+    template <class RepStates>
+    struct _min_dfa_proc_trans;
+
+    template <>
+    struct _min_dfa_proc_trans<empty_group> { using result = trans_table<>; };
+
+    template <class RepState, class... Rest>
+    struct _min_dfa_proc_trans<state_group<RepState, Rest...>> {
+        // 对状态作一次字符表映射，每次映射结果存进新转换表中
+        template <class char_set> struct map_charset;
+            
+        template <> struct map_charset<char_set<>> { using result = trans_table<>; };
+
+        template <char ch, char... rest>
+        struct map_charset<char_set<ch, rest...>> {
+            using dest_rep = _division_list::find<trans<RepState, ch>>;
+            using new_trans = transition<RepState, dest_rep, ch>;
+            using result = map_charset<rest...>::result::insert<new_trans>;
+        };
+
+        // 由于transtion的排序以源状态为第一优先级, RepStates又是有序的，故直接拼接的结果也是有序的
+        using result = map_charset<charset>::result::concat<_min_dfa_proc_trans<Rest...>::result>;
+    };
+
+    // 构建min_dfa阶段
+    struct _min_dfa_proc_build {
+        using rep_intial  = _division_list::find<initial_state>::front;
+        using rep_accepts = _min_dfa_proc_rep<accept_states>::result;
+        using rep_states  = _min_dfa_proc_rep<_division_list>::result;
+        using trans_table = _min_dfa_proc_trans<rep_states>::result;
+        using result = dfa<trans_table, rep_intial, rep_accepts>;
+    };
+
+public:
+    // 获取最小化DFA
+    using minimum = _min_dfa_proc_build::result;
 };
-
-namespace detail {
-
-template <class dfa>
-struct min_dfa_proc {
-
-};
-
-}
-
-template <class dfa>
-using min_dfa = detail::min_dfa_proc<dfa>::result;
 
 }
 
