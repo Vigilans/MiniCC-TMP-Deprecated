@@ -20,7 +20,7 @@ struct group_list; // 状态组的列表，列表里的组不保证有序且可重复。
 /* ---------------------state实现--------------------- */
 
 template <size_t... I>
-struct state : std::index_sequence<I...> {
+struct state : public std::index_sequence<I...> {
     using code = std::index_sequence<I...>;
     static_assert(is_ascending<size_t, code>::value);
 };
@@ -32,7 +32,7 @@ using state_compare = lex_compare<size_t, Left::code, Right::code>;
 /* ---------------------ordered_group实现--------------------- */
 
 template <template <class, class> class Compare, class... Elems>
-struct ordered_group : std::tuple<Elems...> {
+struct ordered_group : public std::tuple<Elems...> {
     // 定义基础的type_traits
     template <class... Elems>
     using group = ordered_group<Compare, Elems...>;
@@ -71,10 +71,10 @@ struct ordered_group : std::tuple<Elems...> {
     struct pop_first;
 
     template <>
-    struct pop_first<group<>> : std::pair<void, group<>> {};
+    struct pop_first<group<>> : public std::pair<void, group<>> {};
 
     template <class Elem, class... Rest>
-    struct pop_first<group<Elem, Rest...>> : std::pair<Elem, group<Rest...>> {};
+    struct pop_first<group<Elem, Rest...>> : public std::pair<Elem, group<Rest...>> {};
 
     // 二分法在I处将Sequence切分
     template <size_t I>
@@ -161,29 +161,42 @@ struct ordered_group : std::tuple<Elems...> {
 
 /* ---------------------group_list实现--------------------- */
 
-template <>
-struct group_list<> {
-    template <class State>
-    using find = empty_group;
+template <template <class, class> class Equal>
+struct group_list<Equal> {
+    template <class OtherList>
+    using concat = OtherList;
 
-    template <class NewGroup>
-    using insert = group_list<NewGroup>;
+    template <class State>
+    using find = void;
+
+    template <class OtherGroup>
+    using insert = group_list<Equal, OtherGroup>;
 };
 
-template <class Group, class... Rest>
-struct group_list<Group, Rest...> {
+template <template <class, class> class Equal, class Group, class... Rest>
+struct group_list<Equal, Group, Rest...> {
+    template <class... Groups>
+    using list = group_list<Equal, Groups...>;
+
+    template <class Left, class Right>
+    constexpr static bool equal_v = Equal<Left, Right>;
+
+    template <class OtherList> struct _concat_proc;
+    template <class... Groups> struct _concat_proc<list<Groups...>> { using result = list<Group, Rest..., Groups...>; };
+
+    template <class OtherList>
+    using concat = _concat_proc<OtherList>::result;
+
     // 检索第一个包含指定元素的组
     template <class State>
-    using find = std::conditional_t<
-        Group::has<State>, Group, group_list<Rest...>::template find<State>
-    >;
+    using first_group_of = std::conditional_t<Group::has<State>, Group, list<Rest...>::first_group_of<State>>;
 
     // 插入新组，并将新组放置在等价组旁边
-    template <class NewGroup>
+    template <class OtherGroup>
     using insert = std::conditional_t<
-        std::is_same_v<Group, NewGroup>,
-        group_list<NewGroup, Group, Rest...>,
-        concat<group_list<Group>, group_list<Rest...>::insert<NewGroup>>
+        equal_v<Group, OtherGroup>,
+        list<Group, OtherGroup, Rest...>,
+        list<Group>::concat<list<Rest...>::insert<OtherGroup>>>
     >;
 };
 
