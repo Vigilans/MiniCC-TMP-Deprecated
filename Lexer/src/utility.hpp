@@ -2,8 +2,12 @@
 #define UTILITY_H_
 #include <utility>
 #include <tuple>
+#include <cstdint>
 
 namespace cp {
+
+// 传入参数并实例化，便可在编译错误中看到参数的类型
+template <typename...> struct which_type;
 
 template <class T, T c1, T c2>
 constexpr std::bool_constant<c1 == c2> operator==(std::integral_constant<T, c1>, std::integral_constant<T, c2>) { return {}; }
@@ -34,10 +38,13 @@ struct char_sequence : std::integer_sequence<char, chars...> {
 template <char... chars>
 struct char_set {
     template <char ch>
-    constexpr static bool has = ((chars == ch) || ...);
+    constexpr static bool has_v = ((chars == ch) || ...);
 
     template <char ch>
-    using insert = std::conditional_t<has<ch>, char_set<chars...>, char_set<ch, chars...>>;
+    using has = std::bool_constant<has_v<ch>>;
+
+    template <char ch>
+    using insert = std::conditional_t<has_v<ch>, char_set<chars...>, char_set<ch, chars...>>;
 };
 
 // 按照less-than字典序进行比较
@@ -57,6 +64,14 @@ struct lex_compare<T, std::integer_sequence<T, v1, I1...>, std::integer_sequence
       std::conditional_t<(v1 > v2), std::false_type,
       lex_compare<T, std::integer_sequence<T, I1...>, std::integer_sequence<T, I2...>>>> {};
 
+// 比较相关trait
+template <template <class Left, class Right> class Compare>
+struct comparator_trait {
+    template <class Left, class Right> using origin   = Compare<Left, Right>;
+    template <class Left, class Right> using reversed = Compare<Right, Left>;
+    template <class Left, class Right> using equal = std::bool_constant<(!origin<Left, Right>::value && !reversed<Left, Right>::value)>;
+};
+
 // 判断一个整数序列是否为升序
 template <class T, class I>
 struct is_ascending;
@@ -67,6 +82,18 @@ struct is_ascending<T, std::integer_sequence<T, v>> : std::true_type {};
 template <class T, T v1, T v2, T... I>
 struct is_ascending<T, std::integer_sequence<T, v1, v2, I...>> :
     std::bool_constant<(v1 < v2) && is_ascending<T, std::integer_sequence<T, v2, I...>>::value> {};
+
+/* ---------------------tuple类型方法补充--------------------- */
+
+// 重新定义一个pair是因为std::pair有数据成员，会导致各种未定义错误
+template <class First, class Second>
+struct type_pair {
+    using first  = First;
+    using second = Second;
+    
+    template <class Type>
+    using has = std::disjunction<std::is_same<Type, First>, std::is_same<Type, Second>>;
+};
 
 template <class... Tuples>
 struct _tuple_concat_impl;
@@ -80,6 +107,28 @@ template <class This, class... Rest>
 struct _tuple_concat_impl<This, Rest...> { using result = typename _tuple_concat_impl<This, typename _tuple_concat_impl<Rest...>::result>::result; };
 template <class... Tuples>
 using tuple_concat = typename _tuple_concat_impl<Tuples...>::result;
+
+template <class T, class = void> 
+struct _as_tuple_impl { using type = T; };
+template <class T>
+struct _as_tuple_impl<T, std::void_t<typename T::tuple>> { using type = typename T::tuple; };
+template <class T>
+using as_tuple = typename _as_tuple_impl<T>::type;
+
+template <template <class Tuple> class Constructor, template <class T> class TupleMapper, class... Types>
+using tuplelike_concat = Constructor<tuple_concat<TupleMapper<Types>...>>;
+
+// 反转tuple
+template <class Tuple>
+struct _tuple_reverse_impl;
+template <>
+struct _tuple_reverse_impl<std::tuple<>> { using result = std::tuple<>; };
+template <class This, class... Rest>
+struct _tuple_reverse_impl<std::tuple<This, Rest...>> {
+    using result = tuple_concat<typename _tuple_reverse_impl<std::tuple<Rest...>>::result, std::tuple<This>>;
+};
+template <class Tuple>
+using tuple_reverse = typename _tuple_reverse_impl<Tuple>::result;
 
 // 基于tuple内类型有序的前提下进行A-B集合操作
 template <class A, class B, template <class, class> class Compare>
