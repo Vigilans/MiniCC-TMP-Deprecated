@@ -31,23 +31,11 @@ using null_transition = transition<null_state, -1, null_state>;
 template <class TransitionTuple = std::tuple<>>
 struct trans_table;
 
-template <>
-struct trans_table<std::tuple<>> : public ordered_group<std::tuple<>, trans_compare, null_transition> {
-    template <class From, char ch>
-    using trans   = null_state;
-
-    template <class T>
-    using insert  = trans_table<std::tuple<T>>;
-
-    using states  = empty_group;
-    using charset = char_set<>;
-};
-
 template <class Transition, class... Rest>
 struct trans_table<std::tuple<Transition, Rest...>> : public ordered_group<
     std::tuple<Transition, Rest...>, trans_compare, null_transition
 > {
-    // type-traits定义
+    // type-traits
     using super = ordered_group<std::tuple<Transition, Rest...>, trans_compare, null_transition>;
 
     // 按照源状态和转移条件检索目的状态
@@ -57,22 +45,40 @@ struct trans_table<std::tuple<Transition, Rest...>> : public ordered_group<
     template <class T>
     using insert = trans_table<typename super::template insert<T>::tuple>;
 
+    template <class... TransTables>
+    using concat = trans_table<typename super::template concat<TransTables...>::tuple>;
+
     // 字符集及状态集
     using states  = typename trans_table<std::tuple<Rest...>>::states::template insert<typename Transition::from_state>::template insert<typename Transition::to_state>;
     using charset = typename trans_table<std::tuple<Rest...>>::charset::template insert<Transition::cond>;
 };
 
+template <>
+struct trans_table<std::tuple<>> : public ordered_group<std::tuple<>, trans_compare, null_transition> {
+
+    using super = ordered_group<std::tuple<>, trans_compare, null_transition>;
+
+    template <class From, char ch>
+    using trans = null_state;
+
+    template <class T>
+    using insert = trans_table<std::tuple<T>>;
+
+    template <class... TransTables>
+    using concat = trans_table<typename super::template concat<TransTables...>::tuple>;
+
+    using states = empty_group;
+    using charset = char_set<>;
+};
+
 template <class... Transitions>
 struct _init_trans_table_impl;
-
 template <>
 struct _init_trans_table_impl<> { using result = trans_table<std::tuple<>>; };
-
 template <class Transition, class... Rest>
 struct _init_trans_table_impl<Transition, Rest...> {
     using result = typename _init_trans_table_impl<Rest...>::result::template insert<Transition>;
 };
-
 template <class... Transitions>
 using init_trans_table = typename _init_trans_table_impl<Transitions...>::result;
 
@@ -86,129 +92,136 @@ struct dfa {
     using initial_state = InitialState;
     using accept_states = AcceptStates;
     using normal_states = typename states::template diff<accept_states>;
+    using type = dfa<TransTable, InitialState, AcceptStates>;
 
     // 转换函数定义
     template <class From, char ch>
     using trans = typename TransTable::template trans<From, ch>;
+};
 
-public:
-    /* ---------------------min_dfa算法实现--------------------- */
-    // 组分割阶段
-    template <class... Divisions> // 存储划分的列表
-    using division_list = group_list<std::tuple<Divisions...>, std::is_same, empty_group>;
+/* ---------------------min_dfa算法实现--------------------- */
 
+template <class DFA> 
+struct _min_dfa_impl {
+
+    // 划分细分阶段
+    template <class... Groups> // 存储一个划分的各小组的列表
+    using division = group_list<std::tuple<Groups...>, std::is_same, empty_group>;
+
+    template <class Division, bool recursive>
+    struct split_to_atom; // 持续细分划分，直到不能再细分为止
+    template <class Division>
+    struct split_to_atom<Division, false> { using result = Division; }; // 停止递归时，直接返回当前划分
     template <class... Groups>
-    struct _min_dfa_impl_split {
-        using cur_groups = division_list<Groups...>;
-        
-        // 由当前划分集合产生新的划分集合
-        template <class... Divisions> 
-        struct _new_groups_impl;
-        template <> 
-        struct _new_groups_impl<> { using result = division_list<>; };
-        template <class Division, class... Rest>
-        struct _new_groups_impl<Division, Rest...> {
-            // 对 pair<状态, 状态经字符集转换映射后的集合> 进行判等。只判断映射后集合是否相等。相等的Pair会被插在一起。
+    struct split_to_atom<division<Groups...>, true> { // 主递归过程
+        using cur_division = division<Groups...>;
+
+        // 由当前划分产生新的划分
+        template <class... Groups>
+        struct split_division;
+        template <>
+        struct split_division<> { using result = division<>; };
+        template <class ThisGroup, class... RestGroups>
+        struct split_division<ThisGroup, RestGroups...> {
+            // 对 pair<源状态 --(字符集)--> 目标集合> 进行判等。只判断映射后目标集合是否相等。相等的Pair会被插在一起。
             template <class Left, class Right>
-            struct state_group_equal : std::is_same<typename Left::second_type, typename Right::second_type> {};
+            struct type_pair_group_equal : std::is_same<typename Left::second, typename Right::second> {};
 
-            template <class... Pairs> // 存储状态-集合对的列表
-            using pair_list = group_list<std::tuple<Pairs...>, state_group_equal, std::pair<null_state, empty_group>>;
+            template <class... Pairs> // 存储pair<源状态 --(字符集)--> 目标集合>的列表
+            using pair_list = group_list<std::tuple<Pairs...>, type_pair_group_equal, type_pair<null_state, empty_group>>;
 
-            // 将当前划分的各状态通过字符集映射至<源状态, 目标状态集合>的列表。
-            template <class Division> 
-            struct pairs_impl;
+            // 获取Group中所有状态的pair<源状态 --(字符集)--> 目标集合>的映射列表。
+            template <class GroupTuple> 
+            struct map;
             template <> 
-            struct pairs_impl<empty_group> { using result = pair_list<>; };
-            template <class State, class... SRest>
-            struct pairs_impl<state_group<State, SRest...>> {
+            struct map<std::tuple<>> { using result = pair_list<>; };
+            template <class ThisState, class... RestStates>
+            struct map<std::tuple<ThisState, RestStates...>> {
                 template <class char_set> struct map_charset;
                 template <char... chs> struct map_charset<char_set<chs...>> {
-                    using result = state_group<trans<State, chs>...>; // 这里没有使用state_group的有序性质，但顺序有意义
+                    using result = state_group<typename DFA::template trans<ThisState, chs>...>; // 这里没有使用state_group的有序性质，但顺序有意义
                 };
 
-                using state_group_pair = std::pair<State, typename map_charset<charset>::result>;
-                using result = typename pairs_impl<state_group<SRest...>>::result::template insert<state_group_pair>;
+                using this_mapped_pair = type_pair<ThisState, typename map_charset<typename DFA::charset>::result>;
+                using rest_mapped_pairs = typename map<std::tuple<RestStates...>>::result;
+                using result = typename rest_mapped_pairs::template insert<this_mapped_pair>;
             };
 
-            // 将<原状态, 目标状态集合>的列表压缩成新的几个小划分
-            template <class PairList> 
-            struct compress_impl;
-            template <> 
-            struct compress_impl<pair_list<>> { using result = division_list<>; };
-            template <class Pair> 
-            struct compress_impl<pair_list<Pair>> { using result = division_list<state_group<typename Pair::first_type>>; };
-            template <class Pair, class Neighbor, class... PRest>
-            struct compress_impl<pair_list<Pair, Neighbor, PRest...>> {
-                using divisions = typename compress_impl<pair_list<Neighbor, PRest...>>::result;
-                using combined_group   = typename divisions::front::template insert<typename Pair::first_type>;
-                using individual_group = typename state_group<typename Pair::first_type>;
+            // 将pair<源状态 --(字符集)--> 目标集合>列表压缩至新的几个小组，得到新的分划Π
+            template <class PairList>
+            struct reduce;
+            template <>
+            struct reduce<pair_list<>>     { using result = division<>; };
+            template <class Pair>
+            struct reduce<pair_list<Pair>> { using result = division<state_group<typename Pair::first>>; };
+            template <class ThisPair, class Neighbor, class... RestPairs>
+            struct reduce<pair_list<ThisPair, Neighbor, RestPairs...>> {
+                using rest_groups = typename reduce<pair_list<Neighbor, RestPairs...>>::result;
+                using near_merged = typename rest_groups::front::template insert<typename ThisPair::first>; // 与邻居合并
+                using independent = typename state_group<typename ThisPair::first>; // 当前状态自成一组
                 using result = std::conditional_t<
-                    std::is_same_v<typename Pair::second_type, typename Neighbor::second_type>,
-                    typename division_list<combined_group  >::template concat<typename divisions::rest>, // 若目标状态集合相等，则插进相邻组
-                    typename division_list<individual_group>::template concat<divisions> // 否则，新建一个组
+                    std::is_same_v<typename ThisPair::second, typename Neighbor::second>,
+                    typename division<near_merged>::template concat<typename rest_groups::rest>, // 若目标状态集合相等，则插进相邻组
+                    typename division<independent>::template concat<rest_groups> // 否则，新建一个组
                 >;
             };
-            
-            using mapped_pairs   = typename pairs_impl<Division>::result;
-            using new_divisions  = typename compress_impl<mapped_pairs>::result;
-            using rest_divisions = typename _new_groups_impl<Rest...>::result;
-            using result = typename new_divisions::template concat<rest_divisions>::result;
+
+            using new_this_group  = typename reduce<typename map<typename ThisGroup::reverse::tuple>::result>::result; // reverse::tuple是为了逆序遍历
+            using new_rest_groups = typename split_division<RestGroups...>::result;
+            using result = typename new_this_group::template concat<new_rest_groups>;
         };
 
-        using new_groups = typename _new_groups_impl<Groups...>::result;
+        using new_division = typename split_division<Groups...>::result;
 
-        using result = std::conditional_t<
-            std::is_same_v<new_groups, cur_groups>,
-            new_groups, typename _min_dfa_impl_split<new_groups>::result
-        >;
+        // 当新划分与原划分相等时，停止递归
+        using result = typename split_to_atom<new_division, !std::is_same_v<new_division, cur_division>>::result;
     };
 
-    using _division_list = typename _min_dfa_impl_split<normal_states, accept_states>::result;
+    // 获取最终的不可再细分的划分（初始划分为S-F与F）
+    using final_division = typename split_to_atom<division<typename DFA::normal_states, typename DFA::accept_states>, true>::result;
 
-//    // 映射阶段
-//    template <class ListOrGroup> struct _min_dfa_impl_rep;
-//    template <> struct _min_dfa_impl_rep<division_list<>> { using result = empty_group; };
-//    template <> struct _min_dfa_impl_rep<empty_group> { using result = empty_group; };
-//    template <class Group, class... Rest> struct _min_dfa_impl_rep<division_list<Group, Rest...>> { // 映射List中每个Group至它们的代表状态
-//        using result = typename _min_dfa_impl_rep<division_list<Rest...>>::result::template insert<typename Group::front>;
-//    };
-//    template <class State, class... Rest> struct _min_dfa_impl_rep<state_group<State, Rest...>> { // 映射Group中的每个状态至它们所在组的代表状态
-//        using rep_state = typename _division_list::template first_group_of<State>::front;
-//        using result    = typename _min_dfa_impl_rep<state_group<Rest...>>::result::template insert<rep_state>;
-//    };
-//
-//    // 构建新转换表阶段
-//    template <class RepStates> struct _min_dfa_impl_trans;
-//    template <>                struct _min_dfa_impl_trans<empty_group> { using result = trans_table<>; };
-//    template <class RepState, class... Rest> struct _min_dfa_impl_trans<state_group<RepState, Rest...>> {
-//        // 对状态作一次字符表映射，每次映射结果存进新转换表中
-//        template <class char_set> struct map_charset;
-//        template <> struct map_charset<char_set<>> { using result = trans_table<>; };
-//        template <char ch, char... rest>
-//        struct map_charset<char_set<ch, rest...>> {
-//            using dest_rep = typename _division_list::template first_group_of<trans<RepState, ch>>::front;
-//            using new_trans = transition<RepState, ch, dest_rep>;
-//            using result = typename map_charset<rest...>::result::template insert<new_trans>;
-//        };
-//
-//        // 由于transtion的排序以源状态为第一优先级, RepStates又是有序的，故直接拼接的结果也是有序的
-//        using result = typename map_charset<charset>::result::template concat<typename _min_dfa_impl_trans<Rest...>::result>;
-//    };
-//
-//    // 构建min_dfa阶段
-//    struct _min_dfa_impl_build {
-//        using rep_intial  = typename _division_list::template first_group_of<initial_state>::front;
-//        using rep_accepts = typename _min_dfa_impl_rep<accept_states>::result;
-//        using rep_states  = typename _min_dfa_impl_rep<_division_list>::result;
-//        using trans_table = typename _min_dfa_impl_trans<rep_states>::result;
-//        using result = dfa<trans_table, rep_intial, rep_accepts>;
-//    };
-//
-//public:
-//    // 获取最小化DFA
-//    using minimum = typename _min_dfa_impl_build::result;
+    // 映射阶段，映射参数至一组代表状态
+    template <class ListOrGroup> struct map_rep;
+    template <> struct map_rep<division<>>  { using result = empty_group; };
+    template <> struct map_rep<empty_group> { using result = empty_group; };
+    template <class Group, class... Rest> struct map_rep<division<Group, Rest...>> {    // 映射List中每个Group至它们的代表状态
+        using result = typename map_rep<division<Rest...>>::result::template insert<typename Group::front>; // 同组的代表元素不会重复插入
+    };
+    template <class State, class... Rest> struct map_rep<state_group<State, Rest...>> { // 映射Group中的每个状态至它们所在组的代表状态
+        using rep_state = typename final_division::template first_group_of<State>::front;
+        using result    = typename map_rep<state_group<Rest...>>::result::template insert<rep_state>;
+    };
+    
+    // 构建新转换表阶段
+    template <class... RepStates> struct set_trans_table { using result = trans_table<>; };
+    template <class RepState, class... Rest> struct set_trans_table<state_group<RepState, Rest...>> {
+        // 对状态作一次字符表映射，每次映射结果存进新转换表中
+        template <class char_set> struct map_charset { using result = trans_table<>; };
+        template <char ch, char... rest> struct map_charset<char_set<ch, rest...>> {
+            using dest_state = typename DFA::template trans<RepState, ch>;
+            using dest_rep   = typename final_division::template first_group_of<dest_state>::front;
+            using new_trans  = transition<RepState, ch, dest_rep>;
+            using result = typename map_charset<char_set<rest...>>::result::template insert<new_trans>;
+        };
+    
+        // 由于transtion的排序以源状态为第一优先级, RepStates又是有序的，故直接拼接的结果也是有序的
+        using this_table = typename map_charset<typename DFA::charset>::result;
+        using rest_table = typename set_trans_table<state_group<Rest...>>::result;
+        using result = typename this_table::template concat<rest_table>;
+    };
+    
+    // 构建min_dfa阶段
+    struct build {
+        using rep_initial = typename final_division::template first_group_of<typename DFA::initial_state>::front;
+        using rep_accepts = typename map_rep<typename DFA::accept_states>::result;
+        using rep_states  = typename map_rep<final_division>::result;
+        using trans_table = typename set_trans_table<rep_states>::result;
+        using result = dfa<trans_table, rep_initial, rep_accepts>;
+    };
 };
+
+template <class DFA>
+using min_dfa = typename _min_dfa_impl<DFA>::build::result;
 
 }
 
