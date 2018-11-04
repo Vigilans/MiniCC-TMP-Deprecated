@@ -1,4 +1,6 @@
 #include "../src/dfa.hpp"
+#include <iostream>
+#include <typeinfo>
 
 using namespace cp;
 using namespace std;
@@ -21,68 +23,98 @@ using tDb = transition<D, 'b', E>;
 using tEa = transition<E, 'a', B>;
 using tEb = transition<E, 'b', C>;
 
-//// test transition compare
-//static_assert(trans_compare<tAa, tAb>::value);
-//static_assert(!trans_compare<tAb, tAa>::value);
-//static_assert(!trans_compare<tAa, tAa>::value);
-//static_assert(trans_compare<tAb, tBa>::value);
-//static_assert(trans_compare<tBb, tEa>::value);
-//
-//// test trans_table
-//using table  = init_trans_table<tAa, tAb, tBa, tBb, tCa, tCb, tDa, tDb, tEa, tEb>;
-//using table_ = init_trans_table<tAb, tBb, tBa, tAa, tEb, tCa, tEa, tCb, tDa, tDb>;
-//static_assert(std::is_same_v<state_group<A, B>, trans_table<>::insert<tAa>::states>);
-//static_assert(std::is_same_v<char_set<'a', 'b'>, trans_table<>::insert<tAa>::insert<tAb>::charset>);
-//static_assert(std::is_same_v<table, table_>);
-//static_assert(std::is_same_v<table::states, state_group<A, B, C, D, E>>);
-//static_assert(std::is_same_v<table::charset, char_set<'a', 'b'>>);
-//static_assert(std::is_same_v<table::trans<B, 'b'>, D>);
-//static_assert(std::is_same_v<table::trans<E, 'b'>, C>);
-//
-//// test dfa
-//using DFA = dfa<table, A, state_group<E>>;
-//static_assert(std::is_same_v<DFA::initial_state, A>);
-//static_assert(std::is_same_v<DFA::accept_states, state_group<E>>);
-//static_assert(std::is_same_v<DFA::normal_states, state_group<A, B, C, D>>);
-//
-//// test min-dfa - preparing
-//using p_split = DFA::_min_dfa_impl_split<DFA::normal_states, DFA::accept_states>;
-//using p_groups = p_split::_new_groups_impl<DFA::normal_states, DFA::accept_states>;
-//
-//// test min-dfa::split::pairs process
-//template <class Group> using p_pair  = p_groups::pairs_impl<Group>;
-//template <class Group> using sg_pair = typename p_pair<Group>::state_group_pair;
-//
-//static_assert(std::is_same_v<sg_pair<state_group<A, B, C, D>>, pair<A, state_group<B, C>>>);
-//static_assert(std::is_same_v<sg_pair<state_group<B, C, D>>, pair<B, state_group<B, D>>>);
-//static_assert(std::is_same_v<sg_pair<state_group<C, D>>, pair<C, state_group<B, C>>>);
-//static_assert(std::is_same_v<sg_pair<state_group<D>>, pair<D, state_group<B, E>>>);
-//static_assert(std::is_same_v<
-//    p_pair<state_group<A, B, C, D>>::result, 
-//    p_groups::pair_list< // 是逆序插入的，且对于相等的值，新值插在前面
-//        pair<D, state_group<B, E>>,
-//        pair<A, state_group<B, C>>,
-//        pair<C, state_group<B, C>>,
-//        pair<B, state_group<B, D>>, 
-//    >
-//>);
-//static_assert(std::is_same_v<p_groups::mapped_pairs, p_pair<state_group<A, B, C, D>>::result>);
-//
-//// test min-dfa::split::compress process
-//template <class PairList> using p_cpre = p_groups::compress_impl<PairList>;
-//template <class... Pairs> using pairs = p_groups::pair_list<Pairs...>;
-//
-//using mapD = pair<D, state_group<B, E>>;
-//using mapA = pair<A, state_group<B, C>>;
-//using mapC = pair<C, state_group<B, C>>;
-//using mapB = pair<B, state_group<B, D>>;
-//
-//#define group state_group
-//static_assert(std::is_same_v<p_cpre<pairs<>>::result, DFA::division_list<>>);
-//static_assert(std::is_same_v<p_cpre<pairs<mapB>>::result, DFA::division_list<group<B>>>);
-//static_assert(std::is_same_v<p_cpre<pairs<mapC, mapB>>::result, DFA::division_list<group<C>, group<B>>>);
-//static_assert(std::is_same_v<p_cpre<pairs<mapA, mapC, mapB>>::result, DFA::division_list<group<A, C>, group<B>>>); // 发生合并
-//static_assert(std::is_same_v<p_cpre<pairs<mapD, mapA, mapC, mapB>>::result, DFA::division_list<group<D>, group<A, C>, group<B>>>);
-//#undef group
-//
-//DFA::_division_list;
+// test transition compare
+static_assert(trans_compare<tAa, tAb>::value);
+static_assert(!trans_compare<tAb, tAa>::value);
+static_assert(!trans_compare<tAa, tAa>::value);
+static_assert(trans_compare<tAb, tBa>::value);
+static_assert(trans_compare<tBb, tEa>::value);
+
+// test trans_table
+using table  = init_trans_table<tAa, tAb, tBa, tBb, tCa, tCb, tDa, tDb, tEa, tEb>;
+using table_ = init_trans_table<tAb, tBb, tBa, tAa, tEb, tCa, tEa, tCb, tDa, tDb>;
+static_assert(is_same_v<state_group<A, B>, trans_table<>::insert<tAa>::states>);
+static_assert(is_same_v<char_set<'a', 'b'>, trans_table<>::insert<tAa>::insert<tAb>::charset>);
+static_assert(is_same_v<table, table_>);
+static_assert(is_same_v<table::states, state_group<A, B, C, D, E>>);
+static_assert(is_same_v<table::charset, char_set<'a', 'b'>>);
+static_assert(is_same_v<table::trans<B, 'b'>, D>);
+static_assert(is_same_v<table::trans<E, 'b'>, C>);
+
+// test dfa
+using DFA = dfa<table, A, state_group<E>>;
+static_assert(is_same_v<DFA::initial_state, A>);
+static_assert(is_same_v<DFA::accept_states, state_group<E>>);
+static_assert(is_same_v<DFA::normal_states, state_group<A, B, C, D>>);
+
+// test min-dfa - preparing
+template <class... Groups> using division = _min_dfa_impl<DFA>::division<Groups...>;
+using split_to_atom = _min_dfa_impl<DFA>::split_to_atom<division<DFA::normal_states, DFA::accept_states>, true>;
+using split_division = split_to_atom::split_division<DFA::normal_states, DFA::accept_states>;
+template <class Group> using map = split_division::map<typename Group::tuple>;
+template <class Group> using mapped_pair = typename map<Group>::this_mapped_pair;
+template <class PairList> using reduce = split_division::reduce<PairList>;
+template <class... Pairs> using pairs  = split_division::pair_list<Pairs...>;
+
+#define group state_group
+// test min-dfa::split::map 
+static_assert(is_same_v<mapped_pair<group<A, B, C, D>>, type_pair<A, group<B, C>>>);
+static_assert(is_same_v<mapped_pair<group<B, C, D>>,    type_pair<B, group<B, D>>>);
+static_assert(is_same_v<mapped_pair<group<C, D>>,       type_pair<C, group<B, C>>>);
+static_assert(is_same_v<mapped_pair<group<D>>,          type_pair<D, group<B, E>>>);
+static_assert(is_same_v<
+    map<group<A, B, C, D>::reverse>::result, 
+    pairs<  // 对于相等的值，新值插在前面
+        type_pair<C, group<B, C>>,
+        type_pair<A, group<B, C>>,
+        type_pair<B, group<B, D>>,
+        type_pair<D, group<B, E>>
+    >
+>);
+
+// test min-dfa::split::reduce
+using mapC = type_pair<C, state_group<B, C>>;
+using mapA = type_pair<A, state_group<B, C>>;
+using mapB = type_pair<B, state_group<B, D>>;
+using mapD = type_pair<D, state_group<B, E>>;
+static_assert(is_same_v<reduce<pairs<>>::result,                       division<>>);
+static_assert(is_same_v<reduce<pairs<mapD>>::result,                   division<group<D>>>);
+static_assert(is_same_v<reduce<pairs<mapB, mapD>>::result,             division<group<B>, group<D>>>);
+static_assert(is_same_v<reduce<pairs<mapA, mapB, mapD>>::result,       division<group<A>, group<B>, group<D>>>); 
+static_assert(is_same_v<reduce<pairs<mapC, mapA, mapB, mapD>>::result, division<group<A, C>, group<B>, group<D>>>); // 发生合并
+
+// test min-dfa::split_division result
+static_assert(is_same_v<split_division::new_this_group, division<group<A, C>, group<B>, group<D>>>);
+static_assert(is_same_v<split_division::new_rest_groups, division<group<E>>>);
+static_assert(is_same_v<split_to_atom::new_division, division<group<A, C>, group<B>, group<D>, group<E>>>);
+
+// test min-dfa::split_to_atom and final_division
+using new_division = split_to_atom::new_division;
+using next_split = _min_dfa_impl<DFA>::split_to_atom<new_division, true>;
+static_assert(is_same_v<next_split::new_division, new_division>);
+static_assert(is_same_v<split_to_atom::result, new_division>);
+static_assert(is_same_v<_min_dfa_impl<DFA>::final_division, new_division>);
+
+// test min-dfa::map_representative & new_transtable & build
+using final_division = _min_dfa_impl<DFA>::final_division;
+using build = _min_dfa_impl<DFA>::build;
+using new_trans_table = init_trans_table<
+    transition<A, 'a', B>, transition<A, 'b', A>,
+    transition<B, 'a', B>, transition<B, 'b', D>,
+    transition<D, 'a', B>, transition<D, 'b', E>,
+    transition<E, 'a', B>, transition<E, 'b', A>
+>;
+static_assert(is_same_v<build::rep_initial, A>);
+static_assert(is_same_v<build::rep_accepts, group<E>>);
+static_assert(is_same_v<build::rep_states,  group<A, B, D, E>>);
+static_assert(is_same_v<build::trans_table, new_trans_table>);
+
+#undef group
+
+// test min-dfa
+using MinDFA = min_dfa<DFA>;
+static_assert(is_same_v<MinDFA::initial_state, A>);
+static_assert(is_same_v<MinDFA::accept_states, state_group<E>>);
+static_assert(is_same_v<MinDFA::normal_states, state_group<A, B, D>>);
+static_assert(is_same_v<MinDFA::trans<A, 'b'>, A>);
+static_assert(is_same_v<MinDFA::trans<E, 'b'>, A>);
