@@ -4,7 +4,7 @@
 
 namespace cp {
 
-/* --------------------ÕıÔò±í´ïÊ½Ö÷ÔËËã·û¶¨Òå---------------------- */
+/* --------------------æ­£åˆ™è¡¨è¾¾å¼ä¸»è¿ç®—ç¬¦å®šä¹‰---------------------- */
 
 template <class Derived>
 struct regex {};
@@ -67,7 +67,7 @@ template <class... Rs, class... Ts> constexpr decltype(auto) make_unite (unite<R
 template <class... Rs, class... Ts> constexpr decltype(auto) make_concat(concat<Rs>..., regex<Ts>...) { return concat<Rs..., Ts...>{}; }
 
 
-/* --------------------ÕıÔò±í´ïÊ½¸¨ÖúÔËËã·û¶¨Òå---------------------- */
+/* --------------------æ­£åˆ™è¡¨è¾¾å¼è¾…åŠ©è¿ç®—ç¬¦å®šä¹‰---------------------- */
 
 struct escape_digit : detail::make_united_symbol_range<'0', '9'> {};
 //struct escape_word : decltype(make_unite(

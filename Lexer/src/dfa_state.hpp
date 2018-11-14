@@ -4,30 +4,30 @@
 
 namespace cp {
 
-/* ---------------------Ç°ÖÃÉùÃ÷--------------------- */
+/* ---------------------å‰ç½®å£°æ˜--------------------- */
 
 template <size_t... I> 
-struct state; // ÓÉRegex ASTµÄ½áµãÎ»ÖÃ½øĞĞ±àÂëµÄ×´Ì¬¡£
+struct state; // ç”±Regex ASTçš„ç»“ç‚¹ä½ç½®è¿›è¡Œç¼–ç çš„çŠ¶æ€ã€‚
 
 template <class ElemTuple, template <class Left, class Right> class Compare, class NullElem = void>
-struct ordered_group; // ×´Ì¬µÄ¶ş·ÖÓĞĞò²»ÖØ¸´¼¯ºÏ¡£
+struct ordered_group; // çŠ¶æ€çš„äºŒåˆ†æœ‰åºä¸é‡å¤é›†åˆã€‚
 
 template <class GroupTuple = std::tuple<>, template <class Left, class Right> class Equal = std::is_same, class EmptyGroup = void>
-struct group_list; // ×´Ì¬×éµÄÁĞ±í£¬ÁĞ±íÀïµÄ×é²»±£Ö¤ÓĞĞòÇÒ¿ÉÖØ¸´£¬ÔªËØ±ØĞë°üº¬has·½·¨¡£
+struct group_list; // çŠ¶æ€ç»„çš„åˆ—è¡¨ï¼Œåˆ—è¡¨é‡Œçš„ç»„ä¸ä¿è¯æœ‰åºä¸”å¯é‡å¤ï¼Œå…ƒç´ å¿…é¡»åŒ…å«hasæ–¹æ³•ã€‚
 
 
-/* ---------------------stateÊµÏÖ--------------------- */
+/* ---------------------stateå®ç°--------------------- */
 
 template <size_t... I>
 struct state : public std::index_sequence<I...> {
     using code = std::index_sequence<I...>;
 };
 
-// °´±àÂëµÄ×ÖµäĞò¶Ô¼¯ºÏ½øĞĞ±È½Ï¡£
+// æŒ‰ç¼–ç çš„å­—å…¸åºå¯¹é›†åˆè¿›è¡Œæ¯”è¾ƒã€‚
 template <class Left, class Right>
 struct state_compare : lex_compare<size_t, typename Left::code, typename Right::code> {};
 
-/* ---------------------ordered_groupÊµÏÖ--------------------- */
+/* ---------------------ordered_groupå®ç°--------------------- */
 
 template <class This, class... Rest, template <class Left, class Right> class Compare, class NullElem>
 struct ordered_group<std::tuple<This, Rest...>, Compare, NullElem> {
@@ -40,20 +40,20 @@ struct ordered_group<std::tuple<This, Rest...>, Compare, NullElem> {
     using rest  = ctor<std::tuple<Rest...>>;
     using type  = ctor<std::tuple<This, Rest...>>;
 
-    // »ñÈ¡ÔªËØÊıÁ¿
+    // è·å–å…ƒç´ æ•°é‡
     constexpr static auto size = sizeof...(Rest) + 1;
 
-    // »ñÈ¡ÄæÏòÓĞĞò¼¯ºÏ
+    // è·å–é€†å‘æœ‰åºé›†åˆ
     using reverse = ordered_group<tuple_reverse<tuple>, typename comparator_trait<Compare>::reversed, null_elem>;
 
-    // ºÏ²¢¶à¸öÔªËØ»òÔªËØ¼¯ºÏ
+    // åˆå¹¶å¤šä¸ªå…ƒç´ æˆ–å…ƒç´ é›†åˆ
     template <class... GroupsOrElems>
     using concat = tuplelike_concat<ctor, as_tuple, tuple, GroupsOrElems...>;
 
     template <class Other>
     using diff = ctor<tuple_diff<tuple, typename Other::tuple, Compare>>;
 
-    // ¶ş·Ö·¨ÔÚI´¦½«SequenceÇĞ·Ö
+    // äºŒåˆ†æ³•åœ¨Iå¤„å°†Sequenceåˆ‡åˆ†
     template <size_t I> struct _split_impl;
     template <> struct _split_impl<0> { using result = type_pair<ordered_group<std::tuple<>, Compare, NullElem>, type>; };
     template <> struct _split_impl<1> { using result = type_pair<ordered_group<std::tuple<front>, Compare, NullElem>, rest>; };
@@ -68,31 +68,31 @@ struct ordered_group<std::tuple<This, Rest...>, Compare, NullElem> {
     template <size_t I>
     using split = typename _split_impl<I>::result;
 
-    // »ñÈ¡ÓĞĞòÔªËØ¼¯µÄÇ°°ëÓëºó°ë²¿·Ö
+    // è·å–æœ‰åºå…ƒç´ é›†çš„å‰åŠä¸ååŠéƒ¨åˆ†
     using first_half  = typename split<size / 2>::first;
     using second_half = typename split<size / 2>::second::rest;
     using mid_elem    = typename split<size / 2>::second::front;
 
-    // ¶ş·Ö·¨²éÕÒÖ¸¶¨ÔªËØ£¨ÀûÓÃÁËSFINAE×÷Ä£Ê½Æ¥Åä£©
-    template <class Elem, class Enable = void> struct _find_impl { // ÂäÔÚÕâÀï¼´ÓĞElem == mid_elem
-        using result = mid_elem; // ÖĞ¼äÔªËØ¼´Îª²éÕÒ½á¹û
+    // äºŒåˆ†æ³•æŸ¥æ‰¾æŒ‡å®šå…ƒç´ ï¼ˆåˆ©ç”¨äº†SFINAEä½œæ¨¡å¼åŒ¹é…ï¼‰
+    template <class Elem, class Enable = void> struct _find_impl { // è½åœ¨è¿™é‡Œå³æœ‰Elem == mid_elem
+        using result = mid_elem; // ä¸­é—´å…ƒç´ å³ä¸ºæŸ¥æ‰¾ç»“æœ
     };
-    template <class Elem> struct _find_impl<Elem, std::enable_if_t<Compare<Elem, mid_elem>::value>> { // ÔÚ×ó°ë²¿·Ö²éÕÒ
+    template <class Elem> struct _find_impl<Elem, std::enable_if_t<Compare<Elem, mid_elem>::value>> { // åœ¨å·¦åŠéƒ¨åˆ†æŸ¥æ‰¾
         using result = typename first_half::template find<Elem>;
     };
-    template <class Elem> struct _find_impl<Elem, std::enable_if_t<Compare<mid_elem, Elem>::value>> { // ÔÚÓÒ°ë²¿·Ö²éÕÒ
+    template <class Elem> struct _find_impl<Elem, std::enable_if_t<Compare<mid_elem, Elem>::value>> { // åœ¨å³åŠéƒ¨åˆ†æŸ¥æ‰¾
         using result = typename second_half::template find<Elem>;
     };
 
 
-    // ¶ş·Ö·¨²åÈë·ÇÖØµÄĞÂÔªËØ£¨ÀûÓÃÁËSFINAE×÷Ä£Ê½Æ¥Åä£©
-    template <class Elem, class Enable = void> struct _insert_impl { // ÂäÔÚÕâÀï¼´ÓĞElem == mid_elem
-        using result = type; // ²»²åÈë
+    // äºŒåˆ†æ³•æ’å…¥éé‡çš„æ–°å…ƒç´ ï¼ˆåˆ©ç”¨äº†SFINAEä½œæ¨¡å¼åŒ¹é…ï¼‰
+    template <class Elem, class Enable = void> struct _insert_impl { // è½åœ¨è¿™é‡Œå³æœ‰Elem == mid_elem
+        using result = type; // ä¸æ’å…¥
     };
-    template <class Elem> struct _insert_impl<Elem, std::enable_if_t<Compare<Elem, mid_elem>::value>> { // ĞÂÔªËØÔÚ×ó°ë²¿·Ö
+    template <class Elem> struct _insert_impl<Elem, std::enable_if_t<Compare<Elem, mid_elem>::value>> { // æ–°å…ƒç´ åœ¨å·¦åŠéƒ¨åˆ†
         using result = typename first_half::template insert<Elem>::template concat<mid_elem, second_half>;
     };
-    template <class Elem> struct _insert_impl<Elem, std::enable_if_t<Compare<mid_elem, Elem>::value>> { // ĞÂÔªËØÔÚÓÒ°ë²¿·Ö
+    template <class Elem> struct _insert_impl<Elem, std::enable_if_t<Compare<mid_elem, Elem>::value>> { // æ–°å…ƒç´ åœ¨å³åŠéƒ¨åˆ†
         using result = typename first_half::template concat<mid_elem, typename second_half::template insert<Elem>>;
     };
 
@@ -102,7 +102,7 @@ struct ordered_group<std::tuple<This, Rest...>, Compare, NullElem> {
     template <class Elem> using has    = std::negation<std::is_same<find<Elem>, null_elem>>;
 };
 
-// base caseÌØ»¯
+// base caseç‰¹åŒ–
 template <template <class Left, class Right> class Compare, class NullElem>
 struct ordered_group<std::tuple<>, Compare, NullElem> {
     // type_traits
@@ -129,7 +129,7 @@ struct ordered_group<std::tuple<>, Compare, NullElem> {
     template <class Elem> using has = std::false_type;
 };
 
-/* ---------------------group_listÊµÏÖ--------------------- */
+/* ---------------------group_listå®ç°--------------------- */
 
 template <class This, class... Rest, template <class, class> class Equal, class EmptyGroup>
 struct group_list<std::tuple<This, Rest...>, Equal, EmptyGroup> {
@@ -144,17 +144,17 @@ struct group_list<std::tuple<This, Rest...>, Equal, EmptyGroup> {
     template <class... OtherLists>
     using concat = tuplelike_concat<ctor, as_tuple, tuple, OtherLists...>;
 
-    // ¼ìË÷µÚÒ»¸ö°üº¬Ö¸¶¨ÔªËØµÄ×é
+    // æ£€ç´¢ç¬¬ä¸€ä¸ªåŒ…å«æŒ‡å®šå…ƒç´ çš„ç»„
     template <class State, class Enable = void> struct _first_group_of_impl { 
-        using result = front; // ÕÒµ½µÄÇé¿öÏÂ£¬·µ»ØµÚÒ»¸ö×é
+        using result = front; // æ‰¾åˆ°çš„æƒ…å†µä¸‹ï¼Œè¿”å›ç¬¬ä¸€ä¸ªç»„
     }; 
     template <class State> struct _first_group_of_impl<State, std::enable_if_t<!front::template has<State>::value>> { 
-        using result = typename rest::template first_group_of<State>; // µÚÒ»¸ö×é²»Æ¥ÅäµÄÇé¿öÏÂ£¬µİ¹é¼ÌĞø²éÕÒ
+        using result = typename rest::template first_group_of<State>; // ç¬¬ä¸€ä¸ªç»„ä¸åŒ¹é…çš„æƒ…å†µä¸‹ï¼Œé€’å½’ç»§ç»­æŸ¥æ‰¾
     };
     template <class State>
     using first_group_of = typename _first_group_of_impl<State>::result;
 
-    // ²åÈëĞÂ×é£¬²¢½«ĞÂ×é·ÅÖÃÔÚµÈ¼Û×éÅÔ±ß
+    // æ’å…¥æ–°ç»„ï¼Œå¹¶å°†æ–°ç»„æ”¾ç½®åœ¨ç­‰ä»·ç»„æ—è¾¹
     template <class Group, class Enable = void> struct _insert_impl {
         using result = ctor<std::tuple<Group, This, Rest...>>;
     };
@@ -187,7 +187,7 @@ struct group_list<std::tuple<>, Equal, EmptyGroup> {
     using insert = group_list<std::tuple<OtherGroup>, Equal, EmptyGroup>;
 };
 
-/* ---------------------stateÏà¹ØÈİÆ÷°ü×°--------------------- */
+/* ---------------------stateç›¸å…³å®¹å™¨åŒ…è£…--------------------- */
 
 using null_state = state<>;
 

@@ -4,10 +4,9 @@
 #include "dfa_state.hpp"
 
 using namespace std;
-//using namespace cp;
+using namespace cp;
 
 
 int main() {
-
     return 0;
 }

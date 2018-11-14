@@ -6,7 +6,7 @@
 
 namespace cp {
 
-// ´«Èë²ÎÊı²¢ÊµÀı»¯£¬±ã¿ÉÔÚ±àÒë´íÎóÖĞ¿´µ½²ÎÊıµÄÀàĞÍ
+// ä¼ å…¥å‚æ•°å¹¶å®ä¾‹åŒ–ï¼Œä¾¿å¯åœ¨ç¼–è¯‘é”™è¯¯ä¸­çœ‹åˆ°å‚æ•°çš„ç±»å‹
 template <typename...> struct which_type;
 
 template <class T, T c1, T c2>
@@ -23,7 +23,7 @@ using char_constant = std::integral_constant<char, c>;
 template <char c>
 constexpr static auto ch = char_constant<c>{};
 
-// ×Ö·ûĞòÁĞ£¬×Ö·ûµÄÎ»ÖÃÓĞÊµ¼ÊÒâÒå
+// å­—ç¬¦åºåˆ—ï¼Œå­—ç¬¦çš„ä½ç½®æœ‰å®é™…æ„ä¹‰
 template <char... chars>
 struct char_sequence : std::integer_sequence<char, chars...> {
     template <size_t i>
@@ -33,8 +33,8 @@ struct char_sequence : std::integer_sequence<char, chars...> {
     }
 };
 
-// ×Ö·û¼¯ºÏ£¬×Ö·ûµÄÎ»ÖÃÎŞÒâÒå
-// ÔİÊ±Ã»ÓĞĞèÒª±È½Ï×Ö·û¼¯ºÏÏàµÈµÄ²Ù×÷£¬¹Ê²»±£Ö¤ÓĞĞòÒ²¿ÉÒÔ
+// å­—ç¬¦é›†åˆï¼Œå­—ç¬¦çš„ä½ç½®æ— æ„ä¹‰
+// æš‚æ—¶æ²¡æœ‰éœ€è¦æ¯”è¾ƒå­—ç¬¦é›†åˆç›¸ç­‰çš„æ“ä½œï¼Œæ•…ä¸ä¿è¯æœ‰åºä¹Ÿå¯ä»¥
 template <char... chars>
 struct char_set {
     template <char ch>
@@ -47,24 +47,24 @@ struct char_set {
     using insert = std::conditional_t<has_v<ch>, char_set<chars...>, char_set<ch, chars...>>;
 };
 
-// °´ÕÕless-than×ÖµäĞò½øĞĞ±È½Ï
+// æŒ‰ç…§less-thanå­—å…¸åºè¿›è¡Œæ¯”è¾ƒ
 template <class T, class I1, class I2>
 struct lex_compare;
-template <class T> // Á½¸ö¿ÕĞòÁĞ±È½Ï·µ»Øfalse
+template <class T> // ä¸¤ä¸ªç©ºåºåˆ—æ¯”è¾ƒè¿”å›false
 struct lex_compare<T, std::integer_sequence<T>, std::integer_sequence<T>> : std::false_type {};
-template <class T, T v, T... rest> // ·Ç¿ÕĞòÁĞ±È¿ÕĞòÁĞ´ó£¬·µ»Øfalse
+template <class T, T v, T... rest> // éç©ºåºåˆ—æ¯”ç©ºåºåˆ—å¤§ï¼Œè¿”å›false
 struct lex_compare<T, std::integer_sequence<T, v, rest...>, std::integer_sequence<T>> : std::false_type {};
-template <class T, T v, T... rest> // ¿ÕĞòÁĞ±È·Ç¿ÕĞòÁĞĞ¡£¬·µ»Øtrue
+template <class T, T v, T... rest> // ç©ºåºåˆ—æ¯”éç©ºåºåˆ—å°ï¼Œè¿”å›true
 struct lex_compare<T, std::integer_sequence<T>, std::integer_sequence<T, v, rest...>> : std::true_type {};
-template <class T, T v1, T v2> // µ¥ÔªËØĞòÁĞÖ±½Ó±È½ÏÖµ
+template <class T, T v1, T v2> // å•å…ƒç´ åºåˆ—ç›´æ¥æ¯”è¾ƒå€¼
 struct lex_compare<T, std::integer_sequence<T, v1>, std::integer_sequence<T, v2>> : std::bool_constant<(v1 < v2)> {};
-template <class T, T v1, T... I1, T v2, T... I2> // Á½Õß¾ù·Ç¿ÕÊ±£¬½øĞĞÄ¬ÈÏ×ÖµäĞò±È½Ï
+template <class T, T v1, T... I1, T v2, T... I2> // ä¸¤è€…å‡éç©ºæ—¶ï¼Œè¿›è¡Œé»˜è®¤å­—å…¸åºæ¯”è¾ƒ
 struct lex_compare<T, std::integer_sequence<T, v1, I1...>, std::integer_sequence<T, v2, I2...>>
     : std::conditional_t<(v1 < v2), std::true_type,
       std::conditional_t<(v1 > v2), std::false_type,
       lex_compare<T, std::integer_sequence<T, I1...>, std::integer_sequence<T, I2...>>>> {};
 
-// ±È½ÏÏà¹Øtrait
+// æ¯”è¾ƒç›¸å…³trait
 template <template <class Left, class Right> class Compare>
 struct comparator_trait {
     template <class Left, class Right> using origin   = Compare<Left, Right>;
@@ -72,7 +72,7 @@ struct comparator_trait {
     template <class Left, class Right> using equal = std::bool_constant<(!origin<Left, Right>::value && !reversed<Left, Right>::value)>;
 };
 
-// ÅĞ¶ÏÒ»¸öÕûÊıĞòÁĞÊÇ·ñÎªÉıĞò
+// åˆ¤æ–­ä¸€ä¸ªæ•´æ•°åºåˆ—æ˜¯å¦ä¸ºå‡åº
 template <class T, class I>
 struct is_ascending;
 template <class T>
@@ -83,9 +83,9 @@ template <class T, T v1, T v2, T... I>
 struct is_ascending<T, std::integer_sequence<T, v1, v2, I...>> :
     std::bool_constant<(v1 < v2) && is_ascending<T, std::integer_sequence<T, v2, I...>>::value> {};
 
-/* ---------------------tupleÀàĞÍ·½·¨²¹³ä--------------------- */
+/* ---------------------tupleç±»å‹æ–¹æ³•è¡¥å……--------------------- */
 
-// ÖØĞÂ¶¨ÒåÒ»¸öpairÊÇÒòÎªstd::pairÓĞÊı¾İ³ÉÔ±£¬»áµ¼ÖÂ¸÷ÖÖÎ´¶¨Òå´íÎó
+// é‡æ–°å®šä¹‰ä¸€ä¸ªpairæ˜¯å› ä¸ºstd::pairæœ‰æ•°æ®æˆå‘˜ï¼Œä¼šå¯¼è‡´å„ç§æœªå®šä¹‰é”™è¯¯
 template <class First, class Second>
 struct type_pair {
     using first  = First;
@@ -118,7 +118,7 @@ using as_tuple = typename _as_tuple_impl<T>::type;
 template <template <class Tuple> class Constructor, template <class T> class TupleMapper, class... Types>
 using tuplelike_concat = Constructor<tuple_concat<TupleMapper<Types>...>>;
 
-// ·´×ªtuple
+// åè½¬tuple
 template <class Tuple>
 struct _tuple_reverse_impl;
 template <>
@@ -130,7 +130,7 @@ struct _tuple_reverse_impl<std::tuple<This, Rest...>> {
 template <class Tuple>
 using tuple_reverse = typename _tuple_reverse_impl<Tuple>::result;
 
-// »ùÓÚtupleÄÚÀàĞÍÓĞĞòµÄÇ°ÌáÏÂ½øĞĞA-B¼¯ºÏ²Ù×÷
+// åŸºäºtupleå†…ç±»å‹æœ‰åºçš„å‰æä¸‹è¿›è¡ŒA-Bé›†åˆæ“ä½œ
 template <class A, class B, template <class, class> class Compare>
 struct _tuple_diff_impl;
 template <class... B, template <class, class> class Compare>

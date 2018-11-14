@@ -38,7 +38,7 @@ class regex_parser {
 public:
     template <class Sequence>
     constexpr static decltype(auto) parse(Sequence s) {
-        // 根节点为括号操作，从索引0开始解析，初始ParseResult为void
+        // 鏍硅妭鐐逛负鎷彿鎿嶄綔锛屼粠绱㈠紩0寮�濮嬭В鏋愶紝鍒濆ParseResult涓簐oid
         return parse_bracket(parse_result<Sequence, 0, void>{});
     }
 
