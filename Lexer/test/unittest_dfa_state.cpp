@@ -1,9 +1,9 @@
-#include "../src/dfa_state.hpp"
+#include "../src/dfa/dfa_state.hpp"
 
 using namespace cp;
 using namespace std;
 
-// ÏÂÁÐA, B, C, DÊÇÑÏ¸ñÉýÐò±íÊ¾µÄ
+// ï¿½ï¿½ï¿½ï¿½A, B, C, Dï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½
 using A = state<0, 1, 2>;
 using B = state<1, 2, 3>;
 using C = state<1, 2, 3, 4, 5>;

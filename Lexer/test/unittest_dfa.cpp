@@ -1,11 +1,11 @@
-#include "../src/dfa.hpp"
+#include "../src/dfa/dfa.hpp"
 #include <iostream>
 #include <typeinfo>
 
 using namespace cp;
 using namespace std;
 
-// ×ÏÁúÊéÍ¼3-36£¬Îª±£ÐòÓëÍ¼3-63±àÂë²»Ò»ÖÂ
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼3-36ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼3-63ï¿½ï¿½ï¿½ë²»Ò»ï¿½ï¿½
 using A = state<1, 2, 3>;
 using B = state<1, 2, 3, 4>;
 using C = state<1, 2, 3, 5>;
@@ -64,7 +64,7 @@ static_assert(is_same_v<mapped_pair<group<C, D>>,       type_pair<C, group<B, C>
 static_assert(is_same_v<mapped_pair<group<D>>,          type_pair<D, group<B, E>>>);
 static_assert(is_same_v<
     map<group<A, B, C, D>::reverse>::result, 
-    pairs<  // ¶ÔÓÚÏàµÈµÄÖµ£¬ÐÂÖµ²åÔÚÇ°Ãæ
+    pairs<  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èµï¿½Öµï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½
         type_pair<C, group<B, C>>,
         type_pair<A, group<B, C>>,
         type_pair<B, group<B, D>>,
@@ -81,7 +81,7 @@ static_assert(is_same_v<reduce<pairs<>>::result,                       division<
 static_assert(is_same_v<reduce<pairs<mapD>>::result,                   division<group<D>>>);
 static_assert(is_same_v<reduce<pairs<mapB, mapD>>::result,             division<group<B>, group<D>>>);
 static_assert(is_same_v<reduce<pairs<mapA, mapB, mapD>>::result,       division<group<A>, group<B>, group<D>>>); 
-static_assert(is_same_v<reduce<pairs<mapC, mapA, mapB, mapD>>::result, division<group<A, C>, group<B>, group<D>>>); // ·¢ÉúºÏ²¢
+static_assert(is_same_v<reduce<pairs<mapC, mapA, mapB, mapD>>::result, division<group<A, C>, group<B>, group<D>>>); // ï¿½ï¿½ï¿½ï¿½ï¿½Ï²ï¿½
 
 // test min-dfa::split_division result
 static_assert(is_same_v<split_division::new_this_group, division<group<A, C>, group<B>, group<D>>>);
