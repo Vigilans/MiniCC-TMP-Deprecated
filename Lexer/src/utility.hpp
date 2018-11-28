@@ -14,6 +14,9 @@ constexpr std::bool_constant<c1 == c2> operator==(std::integral_constant<T, c1>,
 template <class T, T c1, T c2>
 constexpr std::bool_constant<c1 != c2> operator!=(std::integral_constant<T, c1>, std::integral_constant<T, c2>) { return {}; }
 
+template <class Left, class Right>
+using integral_compare = std::bool_constant<(Left::value < Right::value)>;
+
 template <size_t N>
 using index_constant = std::integral_constant<size_t, N>;
 
@@ -21,31 +24,30 @@ template <char c>
 using char_constant = std::integral_constant<char, c>;
 
 template <char c>
-constexpr static auto ch = char_constant<c>{};
+using cc = char_constant<c>;
+
+template <char c>
+constexpr static auto ch = cc<c>{};
 
 // 字符序列，字符的位置有实际意义
 template <char... chars>
-struct char_sequence : std::integer_sequence<char, chars...> {
-    template <size_t i>
-    constexpr static decltype(auto) get() {
-        static_assert(i < sizeof...(chars));
-        return char_constant<std::get<i>(std::make_tuple(chars...))>{};
-    }
-};
+using char_sequence = std::integer_sequence<char, chars...>;
 
-// 字符集合，字符的位置无意义
-// 暂时没有需要比较字符集合相等的操作，故不保证有序也可以
-template <char... chars>
-struct char_set {
-    template <char ch>
-    constexpr static bool has_v = ((chars == ch) || ...);
+// 转换整数序列至整数元组
+template <class Sequence>
+struct _int_seq_to_tuple_impl;
+template <class T, T... I>
+struct _int_seq_to_tuple_impl<std::integer_sequence<T, I...>> { using type = std::tuple<std::integral_constant<T, I>...>; };
+template <class Sequence>
+using int_seq_to_tuple = typename _int_seq_to_tuple_impl<Sequence>::type;
 
-    template <char ch>
-    using has = std::bool_constant<has_v<ch>>;
-
-    template <char ch>
-    using insert = std::conditional_t<has_v<ch>, char_set<chars...>, char_set<ch, chars...>>;
-};
+// 转换整数元组至整数序列
+template <class Tuple>
+struct _int_tuple_to_seq_impl;
+template <class T, T... I>
+struct _int_tuple_to_seq_impl<std::tuple<std::integral_constant<T, I>...>> { using type = std::integer_sequence<T, I...>; };
+template <class Tuple>
+using int_tuple_to_seq = typename _int_tuple_to_seq_impl<Tuple>::type;
 
 // 按照less-than字典序进行比较
 template <class T, class I1, class I2>
@@ -95,6 +97,15 @@ struct type_pair {
     using has = std::disjunction<std::is_same<Type, First>, std::is_same<Type, Second>>;
 };
 
+template <class Tuple, template <class Elem> class Mapper>
+struct _tuple_map_impl;
+template <class... Elems, template <class Elem> class Mapper>
+struct _tuple_map_impl<std::tuple<Elems...>, Mapper> {
+    using result = std::tuple<Mapper<Elems>...>;
+};
+template <class Tuple, template <class Elem> class Mapper>
+using tuple_map = typename _tuple_map_impl<Tuple, Mapper>::result;
+
 template <class... Tuples>
 struct _tuple_concat_impl;
 template <>
@@ -134,7 +145,7 @@ using tuple_reverse = typename _tuple_reverse_impl<Tuple>::result;
 template <class A, class B, template <class, class> class Compare>
 struct _tuple_diff_impl;
 template <class... B, template <class, class> class Compare>
-struct _tuple_diff_impl<std::tuple<>, std::tuple<B...>, Compare> { using result = std::tuple<>; };
+struct _tuple_diff_impl<std::tuple<>, std::tuple<B...>, Compare>    { using result = std::tuple<>; };
 template <class a, class... A, template <class, class> class Compare>
 struct _tuple_diff_impl<std::tuple<a, A...>, std::tuple<>, Compare> { using result = std::tuple<a, A...>; };
 template <class a, class... A, class b, class... B, template <class, class> class Compare>
@@ -147,6 +158,24 @@ struct _tuple_diff_impl<std::tuple<a, A...>, std::tuple<b, B...>, Compare> {
 };
 template <class A, class B, template <class, class> class Compare>
 using tuple_diff = typename _tuple_diff_impl<A, B, Compare>::result;
+
+// 基于tuple内类型有序的前提下进行A∪B集合操作
+template <class A, class B, template <class, class> class Compare>
+struct _tuple_union_impl;
+template <class... B, template <class, class> class Compare>
+struct _tuple_union_impl<std::tuple<>, std::tuple<B...>, Compare>    { using result = std::tuple<B...>; };
+template <class a, class... A, template <class, class> class Compare>
+struct _tuple_union_impl<std::tuple<a, A...>, std::tuple<>, Compare> { using result = std::tuple<a, A...>; };
+template <class a, class... A, class b, class... B, template <class, class> class Compare>
+struct _tuple_union_impl<std::tuple<a, A...>, std::tuple<b, B...>, Compare> {
+    using less    = tuple_concat<a, typename _tuple_union_impl<std::tuple<A...>, std::tuple<b, B...>, Compare>::result>;
+    using greater = tuple_concat<b, typename _tuple_union_impl<std::tuple<a, A...>, std::tuple<B...>, Compare>::result>;
+    using equal   = tuple_concat<a, typename _tuple_union_impl<std::tuple<A...>, std::tuple<B...>,    Compare>::result>;
+    using result = std::conditional_t<Compare<a, b>::value, less,      
+                   std::conditional_t<Compare<b, a>::value, greater, equal>>;
+};
+template <class A, class B, template <class, class> class Compare>
+using tuple_union = typename _tuple_union_impl<A, B, Compare>::result;
 
 template <bool v, class T1, class T2>
 constexpr decltype(auto) op_cond(std::bool_constant<v>, T1 lhs, T2 rhs) {
@@ -161,6 +190,15 @@ constexpr decltype(auto) op_loop(Variable state, Condition cond, Transfer trans)
     } else {
         return state;
     }
+}
+
+}
+
+namespace std {
+
+template <size_t Idx, class T, T... I>
+constexpr T get(std::integer_sequence<T, I...>) {
+    return std::get<Idx>(std::array<T, sizeof...(I)>{ I... });
 }
 
 }
