@@ -1,16 +1,19 @@
 #include "../src/dfa/dfa.hpp"
+#include "../src/dfa/min_dfa.hpp"
+#include "../src/dfa/dfa_utility.hpp"
+#include "../src/dfa/array_dfa.hpp"
 #include <iostream>
 #include <typeinfo>
 
 using namespace cp;
 using namespace std;
 
-// ������ͼ3-36��Ϊ������ͼ3-63���벻һ��
-using A = state<1, 2, 3>;
-using B = state<1, 2, 3, 4>;
-using C = state<1, 2, 3, 5>;
-using D = state<1, 2, 3, 6>;
-using E = state<1, 2, 3, 7>;
+// 紫龙书图3-36，为保序与图3-63编码不一致
+using A = state<std::index_sequence<1, 2, 3>>;
+using B = state<std::index_sequence<1, 2, 3, 4>>;
+using C = state<std::index_sequence<1, 2, 3, 5>>;
+using D = state<std::index_sequence<1, 2, 3, 6>>;
+using E = state<std::index_sequence<1, 2, 3, 7>>;
 
 using tAa = transition<A, 'a', B>;
 using tAb = transition<A, 'b', C>;
@@ -30,14 +33,20 @@ static_assert(!trans_compare<tAa, tAa>::value);
 static_assert(trans_compare<tAb, tBa>::value);
 static_assert(trans_compare<tBb, tEa>::value);
 
+// test char_set
+using charset = char_set<char_sequence<'1', '2', '4', '5'>>;
+static_assert(std::is_base_of_v<charset::insert<'6'>, char_set<char_sequence<'1', '2', '4', '5', '6'>>>);
+static_assert(std::is_base_of_v<charset::insert<'3'>, char_set<char_sequence<'1', '2', '3', '4', '5'>>>);
+
+
 // test trans_table
 using table  = init_trans_table<tAa, tAb, tBa, tBb, tCa, tCb, tDa, tDb, tEa, tEb>;
 using table_ = init_trans_table<tAb, tBb, tBa, tAa, tEb, tCa, tEa, tCb, tDa, tDb>;
 static_assert(is_same_v<state_group<A, B>, trans_table<>::insert<tAa>::states>);
-static_assert(is_same_v<char_set<'a', 'b'>, trans_table<>::insert<tAa>::insert<tAb>::charset>);
+static_assert(is_same_v<char_set<char_sequence<'a', 'b'>>, trans_table<>::insert<tAa>::insert<tAb>::charset>);
 static_assert(is_same_v<table, table_>);
 static_assert(is_same_v<table::states, state_group<A, B, C, D, E>>);
-static_assert(is_same_v<table::charset, char_set<'a', 'b'>>);
+static_assert(is_same_v<table::charset, char_set<char_sequence<'a', 'b'>>>);
 static_assert(is_same_v<table::trans<B, 'b'>, D>);
 static_assert(is_same_v<table::trans<E, 'b'>, C>);
 
@@ -64,7 +73,7 @@ static_assert(is_same_v<mapped_pair<group<C, D>>,       type_pair<C, group<B, C>
 static_assert(is_same_v<mapped_pair<group<D>>,          type_pair<D, group<B, E>>>);
 static_assert(is_same_v<
     map<group<A, B, C, D>::reverse>::result, 
-    pairs<  // ������ȵ�ֵ����ֵ����ǰ��
+    pairs<  // 相等时新值插在前面
         type_pair<C, group<B, C>>,
         type_pair<A, group<B, C>>,
         type_pair<B, group<B, D>>,
@@ -118,3 +127,23 @@ static_assert(is_same_v<MinDFA::accept_states, state_group<E>>);
 static_assert(is_same_v<MinDFA::normal_states, state_group<A, B, D>>);
 static_assert(is_same_v<MinDFA::trans<A, 'b'>, A>);
 static_assert(is_same_v<MinDFA::trans<E, 'b'>, A>);
+
+// test index-dfa
+using IndexDFA = index_dfa<DFA>;
+using Ai = state<std::index_sequence<0>>;
+using Bi = state<std::index_sequence<1>>;
+using Ci = state<std::index_sequence<2>>;
+using Di = state<std::index_sequence<3>>;
+using Ei = state<std::index_sequence<4>>;
+static_assert(is_same_v<IndexDFA::initial_state, Ai>);
+static_assert(is_same_v<IndexDFA::accept_states, state_group<Ei>>);
+static_assert(is_same_v<IndexDFA::normal_states, state_group<Ai, Bi, Ci, Di>>);
+static_assert(is_same_v<IndexDFA::states, state_group<Ai, Bi, Ci, Di, Ei>>);
+static_assert(is_same_v<IndexDFA::trans<Ai, 'b'>, Ci>);
+static_assert(is_same_v<IndexDFA::trans<Ei, 'b'>, Ci>);
+
+
+
+int main() {
+    auto& encoder =  array_dfa<IndexDFA>::charset_encoder;
+}

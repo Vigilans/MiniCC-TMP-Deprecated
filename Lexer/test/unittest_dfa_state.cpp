@@ -3,11 +3,11 @@
 using namespace cp;
 using namespace std;
 
-// ����A, B, C, D���ϸ������ʾ��
-using A = state<0, 1, 2>;
-using B = state<1, 2, 3>;
-using C = state<1, 2, 3, 4, 5>;
-using D = state<4, 5, 6>;
+// 以下A, B, C, D是有序的
+using A = state<std::index_sequence<0, 1, 2>>;
+using B = state<std::index_sequence<1, 2, 3>>;
+using C = state<std::index_sequence<1, 2, 3, 4, 5>>;
+using D = state<std::index_sequence<4, 5, 6>>;
 using G1 = state_group<A, B>;
 using G2 = state_group<C, D>;
 using G3 = state_group<A, B, C, D>;
