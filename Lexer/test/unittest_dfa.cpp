@@ -1,7 +1,7 @@
-#include "../src/dfa/dfa.hpp"
-#include "../src/dfa/min_dfa.hpp"
-#include "../src/dfa/dfa_utility.hpp"
-#include "../src/dfa/array_dfa.hpp"
+#include "../src/ctre/dfa/dfa.hpp"
+#include "../src/ctre/dfa/min_dfa.hpp"
+#include "../src/ctre/dfa/dfa_utility.hpp"
+#include "../src/ctre/dfa/array_dfa.hpp"
 #include <iostream>
 #include <typeinfo>
 

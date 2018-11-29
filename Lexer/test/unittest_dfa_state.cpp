@@ -1,4 +1,4 @@
-#include "../src/dfa/dfa_state.hpp"
+#include "../src/ctre/dfa/dfa_state.hpp"
 
 using namespace cp;
 using namespace std;
