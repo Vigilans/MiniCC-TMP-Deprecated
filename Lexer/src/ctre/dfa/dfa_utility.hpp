@@ -18,7 +18,7 @@ struct _index_dfa_impl {
     };
 
     template <class State>
-    using map_state = state<std::index_sequence<index_of<State>::result_v>, State::tag>;
+    using map_state = state<std::index_sequence<index_of<State>::result_v>, State::label>;
 
     template <class TransTable> struct map_trans_table {
         using result = trans_table<>;
@@ -51,7 +51,7 @@ struct _union_state_impl<state<std::index_sequence<I1...>, t1>, state<std::index
     using result = state<std::index_sequence<I1..., I2...>, t1 | t2>;
 };
 
-// 合并两个状态，状态的tag为按位并结果
+// 合并两个状态，状态的label为按位并结果
 template <class A, class B>
 using union_state = typename _union_state_impl<A, B>::result;
 

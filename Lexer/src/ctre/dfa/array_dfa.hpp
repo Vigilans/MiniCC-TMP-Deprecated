@@ -42,7 +42,7 @@ public:
         } else {
             using transition = std::tuple_element_t<i, typename origin::trans_table::tuple>;
             using from_state = typename transition::from_state;
-            using to_state = typename transition::to_state
+            using to_state = typename transition::to_state;
             constexpr auto from = std::get<0>(typename from_state::code{});
             constexpr auto to = std::is_same_v<to_state, null_state> ? -1 : std::get<0>(typename to_state::code{});
             constexpr auto cond = charset_encoder[transition::cond];
@@ -56,21 +56,21 @@ public:
     constexpr static auto trans_table = make_trans_table<table_size - 1>();
 
     template <size_t i>
-    constexpr static auto make_tag_list() {
+    constexpr static auto make_label_list() {
         if constexpr (i == 0) {
             return std::array<std::uint32_t, states_size + 1> {};
         } else {
             using state = std::tuple_element_t<i, typename origin::states::tuple>;
             constexpr auto code = std::get<0>(typename state::code{});
-            constexpr auto tag = state::tag;
-            auto list = make_tag_list<i - 1>();
-            list[code] = tag;
+            constexpr auto label = state::label;
+            auto list = make_label_list<i - 1>();
+            list[code] = label;
             return list;
         }
     }
 
     // 无效状态非接受状态的标签为0，其余均为接受状态。
-    constexpr static auto tag_list = make_tag_list<states_size - 1>();
+    constexpr static auto label_list = make_label_list<states_size - 1>();
 
 public:
     // 空状态索引
@@ -87,8 +87,8 @@ public:
     }
 
     // 获取状态对应的标签
-    constexpr static auto get_tag(int state) {
-        return tag_list[state];
+    constexpr static auto label(int state) {
+        return label_list[state];
     }
 };
 

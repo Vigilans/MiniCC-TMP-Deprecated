@@ -6,7 +6,7 @@ namespace cp {
 
 /* ---------------------前置声明--------------------- */
 
-template <class Code = std::index_sequence<>, std::uint32_t tag = 0>
+template <class Code = std::index_sequence<>, std::uint32_t label = 0>
 struct state; // 由Regex AST的结点位置进行编码的状态。
 
 template <class ElemTuple, template <class Left, class Right> class Compare, class NullElem = void>
@@ -21,7 +21,7 @@ struct group_list; // 状态组的列表，列表里的组不保证有序且可�
 template <size_t... I, std::uint32_t t>
 struct state<std::index_sequence<I...>, t> {
     using code = std::index_sequence<I...>;
-    constexpr static auto tag = t;
+    constexpr static auto label = t;
 };
 
 // 按编码的字典序对集合进行比较。
@@ -45,7 +45,7 @@ struct ordered_group<std::tuple<This, Rest...>, Compare, NullElem> {
     constexpr static auto size = sizeof...(Rest) + 1;
 
     // 获取逆向有序集合
-    using reverse = ordered_group<tuple_reverse<tuple>, typename comparator_trait<Compare>::reversed, null_elem>;
+    using reverse = ordered_group<tuple_reverse<tuple>, comparator_trait<Compare>::reversed, null_elem>;
 
     template <template <class Elem> class Mapper>
     using map = ctor<tuple_map<tuple, Mapper>>;
@@ -166,7 +166,7 @@ struct group_list<std::tuple<This, Rest...>, Equal, EmptyGroup> {
         using result = ctor<std::tuple<Group, This, Rest...>>;
     };
     template <class Group> struct _insert_impl<Group, std::enable_if_t<!Equal<This, Group>::value>> {
-        using this_group = typename ctor<std::tuple<This>>;
+        using this_group  = ctor<std::tuple<This>>;
         using rest_groups = typename rest::template insert<Group>;
         using result = typename this_group::template concat<rest_groups>;
     };
