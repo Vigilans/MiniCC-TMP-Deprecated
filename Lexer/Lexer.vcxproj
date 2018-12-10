@@ -24,11 +24,21 @@
     <ClCompile Include="test\unittest_dfa_state.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ctre\dfa\array_dfa.hpp" />
+    <ClInclude Include="src\ctre\dfa\dfa.hpp" />
+    <ClInclude Include="src\ctre\dfa\dfa_state.hpp" />
+    <ClInclude Include="src\ctre\dfa\dfa_utility.hpp" />
+    <ClInclude Include="src\ctre\dfa\min_dfa.hpp" />
+    <ClInclude Include="src\ctre\regex\regex.hpp" />
+    <ClInclude Include="src\ctre\regex\regex_def.hpp" />
+    <ClInclude Include="src\ctre\regex\regex_parse.hpp" />
+    <ClInclude Include="src\ctre\utility.hpp" />
     <ClInclude Include="src\dfa\array_dfa.hpp" />
     <ClInclude Include="src\dfa\dfa.hpp" />
     <ClInclude Include="src\dfa\dfa_state.hpp" />
     <ClInclude Include="src\dfa\dfa_utility.hpp" />
     <ClInclude Include="src\dfa\min_dfa.hpp" />
+    <ClInclude Include="src\Lexer.hpp" />
     <ClInclude Include="src\regex.hpp" />
     <ClInclude Include="src\regex\regex.hpp" />
     <ClInclude Include="src\regex\regex_def.hpp" />
@@ -37,6 +47,7 @@
     <ClInclude Include="src\dfa.hpp" />
     <ClInclude Include="src\regex_parse.hpp" />
     <ClInclude Include="src\dfa_state.hpp" />
+    <ClInclude Include="src\Scanner.hpp" />
     <ClInclude Include="src\utility.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

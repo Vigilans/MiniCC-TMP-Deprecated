@@ -68,5 +68,8 @@
     <ClInclude Include="src\dfa\array_dfa.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\scanner.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
